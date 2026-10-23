@@ -1,0 +1,336 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caça às Maçãs - Seu Nome</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 15px;
+    text-align: center;
+    font-family: Arial, sans-serif;
+    color: white;
+    background: #172554;
+}
+
+h1 {
+    color: #facc15;
+}
+
+#placar {
+    font-size: 20px;
+    margin: 15px;
+}
+
+#jogo {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    height: 400px;
+    margin: 15px auto;
+    overflow: hidden;
+    border: 4px solid white;
+    border-radius: 15px;
+    background: linear-gradient(#7dd3fc, #dcfce7);
+    touch-action: none;
+}
+
+#cesta {
+    position: absolute;
+    bottom: 12px;
+    left: 45%;
+    font-size: 48px;
+    line-height: 1;
+    user-select: none;
+}
+
+.maca {
+    position: absolute;
+    top: -40px;
+    font-size: 32px;
+    line-height: 1;
+    user-select: none;
+}
+
+button {
+    border: none;
+    border-radius: 10px;
+    padding: 13px 20px;
+    margin: 5px;
+    font-size: 17px;
+    font-weight: bold;
+    background: #facc15;
+    color: #172554;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+button:active {
+    transform: scale(0.96);
+}
+
+.controles {
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+}
+
+.controles button {
+    width: 90px;
+    font-size: 25px;
+}
+
+#mensagem {
+    font-size: 18px;
+    font-weight: bold;
+    min-height: 25px;
+}
+
+#criador {
+    margin-top: 30px;
+    color: #cbd5e1;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>🍎 Caça às Maçãs</h1>
+<p>Capture as maçãs e faça muitos pontos!</p>
+
+<div id="placar">
+    🍎 Pontos: <span id="pontos">0</span>
+    &nbsp; | &nbsp;
+    ❤️ Vidas: <span id="vidas">3</span>
+</div>
+
+<div id="jogo">
+    <div id="cesta">🧺</div>
+</div>
+
+<p id="mensagem">Clique em Jogar para começar!</p>
+
+<button onclick="iniciarJogo()">▶ Jogar / Reiniciar</button>
+
+<div class="controles">
+    <button id="esquerda">⬅️</button>
+    <button id="direita">➡️</button>
+</div>
+
+<p>Computador: use as setas do teclado ou A e D.</p>
+<p>Celular: use os botões ou arraste o dedo no jogo.</p>
+
+<div id="criador">
+    <h3>🎮 Criador do jogo</h3>
+    <p>Desenvolvido por: Seu Nome</p>
+    <p>2º ano EMTI - Programação Web</p>
+</div>
+
+<script>
+const jogo = document.getElementById("jogo");
+const cesta = document.getElementById("cesta");
+const pontosTexto = document.getElementById("pontos");
+const vidasTexto = document.getElementById("vidas");
+const mensagem = document.getElementById("mensagem");
+
+let pontos = 0;
+let vidas = 3;
+let jogando = false;
+let teclas = {};
+let macas = [];
+let ultimoTempo = 0;
+let ultimoSpawn = 0;
+let animacao;
+let velocidade = 2.5;
+
+function iniciarJogo() {
+    cancelAnimationFrame(animacao);
+
+    macas.forEach(maca => maca.elemento.remove());
+    macas = [];
+
+    pontos = 0;
+    vidas = 3;
+    velocidade = 2.5;
+    teclas = {};
+    ultimoTempo = 0;
+    ultimoSpawn = 0;
+    jogando = true;
+
+    cesta.style.left = (jogo.clientWidth / 2 - cesta.offsetWidth / 2) + "px";
+
+    pontosTexto.textContent = pontos;
+    vidasTexto.textContent = vidas;
+    mensagem.textContent = "Pegue as maçãs!";
+
+    animacao = requestAnimationFrame(atualizarJogo);
+}
+
+function criarMaca() {
+    const elemento = document.createElement("div");
+    elemento.className = "maca";
+    elemento.textContent = "🍎";
+
+    const largura = jogo.clientWidth;
+    const x = Math.random() * (largura - 35);
+
+    elemento.style.left = x + "px";
+    elemento.style.top = "-40px";
+    jogo.appendChild(elemento);
+
+    macas.push({
+        elemento: elemento,
+        x: x,
+        y: -40
+    });
+}
+
+function moverCesta(delta) {
+    let x = parseFloat(cesta.style.left) || 0;
+    const velocidadeCesta = 6 * delta;
+
+    if (teclas["ArrowLeft"] || teclas["a"] || teclas["A"]) {
+        x -= velocidadeCesta;
+    }
+
+    if (teclas["ArrowRight"] || teclas["d"] || teclas["D"]) {
+        x += velocidadeCesta;
+    }
+
+    x = Math.max(0, Math.min(x, jogo.clientWidth - cesta.offsetWidth));
+    cesta.style.left = x + "px";
+}
+
+function atualizarJogo(tempo) {
+    if (!jogando) return;
+
+    const delta = ultimoTempo
+        ? Math.min((tempo - ultimoTempo) / 16.67, 2.5)
+        : 1;
+
+    ultimoTempo = tempo;
+
+    moverCesta(delta);
+
+    if (tempo - ultimoSpawn > 800) {
+        criarMaca();
+        ultimoSpawn = tempo;
+    }
+
+    const cestaX = cesta.offsetLeft;
+    const cestaY = jogo.clientHeight - cesta.offsetHeight - 12;
+    const cestaDireita = cestaX + cesta.offsetWidth;
+
+    for (let i = macas.length - 1; i >= 0; i--) {
+        const maca = macas[i];
+
+        maca.y += velocidade * delta;
+        maca.elemento.style.top = maca.y + "px";
+
+        const pegou =
+            maca.y + 30 >= cestaY &&
+            maca.y <= cestaY + cesta.offsetHeight &&
+            maca.x + 30 >= cestaX &&
+            maca.x <= cestaDireita;
+
+        if (pegou) {
+            pontos++;
+            pontosTexto.textContent = pontos;
+            maca.elemento.remove();
+            macas.splice(i, 1);
+
+            if (pontos % 5 === 0) {
+                velocidade += 0.3;
+            }
+
+        } else if (maca.y > jogo.clientHeight) {
+            vidas--;
+            vidasTexto.textContent = vidas;
+            maca.elemento.remove();
+            macas.splice(i, 1);
+
+            if (vidas <= 0) {
+                fimDeJogo();
+                return;
+            }
+        }
+    }
+
+    animacao = requestAnimationFrame(atualizarJogo);
+}
+
+function fimDeJogo() {
+    jogando = false;
+    cancelAnimationFrame(animacao);
+    mensagem.textContent = "Fim de jogo! Você fez " + pontos + " pontos.";
+}
+
+document.addEventListener("keydown", function(event) {
+    if (["ArrowLeft", "ArrowRight", " "].includes(event.key)) {
+        event.preventDefault();
+    }
+
+    teclas[event.key] = true;
+});
+
+document.addEventListener("keyup", function(event) {
+    teclas[event.key] = false;
+});
+
+function configurarBotao(id, tecla) {
+    const botao = document.getElementById(id);
+
+    botao.addEventListener("pointerdown", function(event) {
+        event.preventDefault();
+        teclas[tecla] = true;
+    });
+
+    function soltar() {
+        teclas[tecla] = false;
+    }
+
+    botao.addEventListener("pointerup", soltar);
+    botao.addEventListener("pointerleave", soltar);
+    botao.addEventListener("pointercancel", soltar);
+}
+
+configurarBotao("esquerda", "ArrowLeft");
+configurarBotao("direita", "ArrowRight");
+
+jogo.addEventListener("pointerdown", function(event) {
+    if (!jogando) return;
+    jogo.setPointerCapture(event.pointerId);
+    moverParaToque(event);
+});
+
+jogo.addEventListener("pointermove", function(event) {
+    if (jogando && event.buttons === 1) {
+        moverParaToque(event);
+    }
+});
+
+function moverParaToque(event) {
+    const retangulo = jogo.getBoundingClientRect();
+    let x = event.clientX - retangulo.left - cesta.offsetWidth / 2;
+
+    x = Math.max(0, Math.min(x, jogo.clientWidth - cesta.offsetWidth));
+    cesta.style.left = x + "px";
+}
+
+window.addEventListener("resize", function() {
+    let x = parseFloat(cesta.style.left) || 0;
+    x = Math.min(x, jogo.clientWidth - cesta.offsetWidth);
+    cesta.style.left = Math.max(0, x) + "px";
+});
+</script>
+
+</body>
+</html>
